@@ -58,7 +58,7 @@ class HistoricalDataOrchestrator:
                 return False
             
             # Test scraper connectivity
-            test_symbols = ['AAPL']  # Test with one symbol
+            test_symbols = ['META']  # Test with one symbol
             test_data = self.scraper.scrape_historical_data(test_symbols[0], period='5d')
             
             if not test_data:
@@ -503,7 +503,7 @@ def sync_top_symbols(count: int = 10, period: str = "1y") -> List[HistoricalSync
 
 def create_test_data_sample():
     """Create a small sample of historical data for testing."""
-    test_symbols = ['AAPL', 'MSFT', 'GOOGL']
+    test_symbols = ['META', 'TESLA', 'GOOGL']
     
     orchestrator = HistoricalDataOrchestrator(debug=True)
     
