@@ -1,9 +1,9 @@
-"""Main scraping logic for NASDAQ-100 stock data."""
+"""Main scraping logic for NASDAQ-100 stock data - FIXED VERSION with Real-time Data."""
 
 import time
 import logging
 import requests
-from datetime import datetime
+from datetime import datetime, UTC
 from decimal import Decimal
 from typing import Optional, List, Dict, Any
 from bs4 import BeautifulSoup
@@ -23,7 +23,7 @@ from src.utils import (
 
 
 class YahooFinanceScraper:
-    """Scraper for Yahoo Finance stock data."""
+    """Scraper for Yahoo Finance stock data with real-time market state handling."""
     
     def __init__(self, rate_limiter: RateLimiter = None):
         self.logger = logging.getLogger(__name__)
@@ -38,10 +38,13 @@ class YahooFinanceScraper:
             'failed_scrapes': 0,
             'rate_limit_hits': 0,
             'timeout_errors': 0,
-            'parsing_errors': 0
+            'parsing_errors': 0,
+            'market_hours_data': 0,
+            'after_hours_data': 0,
+            'pre_market_data': 0
         }
         
-        self.logger.info("Yahoo Finance scraper initialized")
+        self.logger.info("Yahoo Finance scraper initialized with real-time data support")
     
     def _create_session(self) -> requests.Session:
         """Create and configure requests session."""
@@ -67,7 +70,7 @@ class YahooFinanceScraper:
     
     @performance_timer
     def scrape_symbol(self, symbol: str) -> Optional[StockData]:
-        """Scrape stock data for a single symbol."""
+        """Scrape stock data for a single symbol with market state awareness."""
         if not symbol or not isinstance(symbol, str):
             raise ValueError(f"Invalid symbol: {symbol}")
         
@@ -89,8 +92,8 @@ class YahooFinanceScraper:
             response = self._make_request(url)
             self.stats['requests_made'] += 1
             
-            # Parse data
-            stock_data = self._parse_response(response, symbol)
+            # Parse data with market state awareness
+            stock_data = self._parse_response_with_market_state(response, symbol)
             
             if stock_data:
                 self.stats['successful_scrapes'] += 1
@@ -100,19 +103,564 @@ class YahooFinanceScraper:
                 self.stats['failed_scrapes'] += 1
                 return None
                 
-        except (NetworkError, TimeoutError, RateLimitError) as e:
+        except (NetworkError, DataValidationError, ParsingError,
+                RateLimitError, TimeoutError, SymbolNotFoundError) as e:
             self.stats['failed_scrapes'] += 1
-            self.logger.warning(f"Network error scraping {symbol}: {e}")
+            self.logger.error(f"Failed to scrape {symbol}: {e}")
+            raise e
+    
+    def _parse_response_with_market_state(self, response: requests.Response, symbol: str) -> Optional[StockData]:
+        """Parse HTML response with awareness of market state (regular/pre/post market)."""
+        try:
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Strategy: Try to get the most current data available based on market state
+            # Priority: Post-market > Pre-market > Regular market > Previous close
+            
+            market_state = self._detect_market_state(soup)
+            self.logger.debug(f"Detected market state for {symbol}: {market_state}")
+            
+            # Extract data based on market state
+            if market_state == 'post_market':
+                data = self._extract_post_market_data(soup, symbol)
+                self.stats['after_hours_data'] += 1
+            elif market_state == 'pre_market':
+                data = self._extract_pre_market_data(soup, symbol)
+                self.stats['pre_market_data'] += 1
+            elif market_state == 'regular':
+                data = self._extract_regular_market_data(soup, symbol)
+                self.stats['market_hours_data'] += 1
+            else:
+                # Fallback to any available data
+                data = self._extract_fallback_data(soup, symbol)
+                self.logger.debug(f"Using fallback data extraction for {symbol}")
+            
+            if not data or 'price' not in data:
+                raise ParsingError(f"No valid price data found for {symbol}")
+            
+            # Parse and validate the extracted data
+            parsed_data = self._parse_extracted_data(data, symbol)
+            
+            if not parsed_data:
+                raise ParsingError(f"Failed to parse data for {symbol}")
+            
+            # Create StockData object
+            stock_data = StockData(
+                symbol=symbol,
+                price=parsed_data['price'],
+                daily_change_percent=parsed_data['daily_change_percent'],
+                daily_change_nominal=parsed_data['daily_change_nominal'],
+                volume=parsed_data['volume'],
+                high=parsed_data['high'],
+                low=parsed_data['low'],
+                open=parsed_data['open'],
+                previous_close=parsed_data['previous_close'],
+                last_updated=datetime.now(UTC).isoformat(),
+                market='NASDAQ'
+            )
+            
+            # Validate the stock data
+            if not stock_data.validate():
+                raise DataValidationError(f"Invalid stock data for {symbol}")
+            
+            self.logger.info(f"✅ {symbol}: ${stock_data.price} ({market_state}) Change: {stock_data.daily_change_percent}%")
+            return stock_data
+            
+        except ParsingError:
             raise
-        except ParsingError as e:
-            self.stats['parsing_errors'] += 1
-            self.stats['failed_scrapes'] += 1
-            self.logger.warning(f"Parsing error for {symbol}: {e}")
+        except DataValidationError:
             raise
         except Exception as e:
-            self.stats['failed_scrapes'] += 1
-            self.logger.error(f"Unexpected error scraping {symbol}: {e}")
-            raise NetworkError(f"Unexpected error: {e}", symbol)
+            raise ParsingError(f"Error parsing response for {symbol}: {e}")
+    
+    def _detect_market_state(self, soup: BeautifulSoup) -> str:
+        """Detect current market state from page indicators."""
+        # Look for market state indicators
+        market_indicators = [
+            # Post-market indicators
+            ('[data-field="postMarketPrice"]', 'post_market'),
+            ('span:contains("After Hours")', 'post_market'),
+            ('span:contains("Post-Market")', 'post_market'),
+            
+            # Pre-market indicators  
+            ('[data-field="preMarketPrice"]', 'pre_market'),
+            ('span:contains("Pre-Market")', 'pre_market'),
+            
+            # Regular market indicators
+            ('[data-field="regularMarketPrice"]', 'regular'),
+        ]
+        
+        for selector, state in market_indicators:
+            try:
+                if ':contains(' in selector:
+                    # Handle text-based selectors differently
+                    text_selector = selector.split(':contains(')[0]
+                    search_text = selector.split(':contains(')[1].rstrip(')')
+                    elements = soup.select(text_selector)
+                    if any(search_text.strip('"') in elem.get_text() for elem in elements):
+                        return state
+                else:
+                    if soup.select_one(selector):
+                        return state
+            except Exception:
+                continue
+        
+        return 'regular'  # Default fallback
+    
+    def _extract_post_market_data(self, soup: BeautifulSoup, symbol: str) -> Dict[str, Any]:
+        """Extract post-market trading data."""
+        data = {}
+        
+        # Post-market specific selectors (also use testid if available)
+        selectors = {
+            'price': [
+                'fin-streamer[data-field="postMarketPrice"]',
+                '[data-field="postMarketPrice"]',
+                '[data-testid="qsp-price"]',  # Fallback to main price
+            ],
+            'change': [
+                'fin-streamer[data-field="postMarketChange"]',
+                '[data-field="postMarketChange"]',
+                '[data-testid="qsp-price-change"]',  # Fallback
+            ],
+            'change_percent': [
+                'fin-streamer[data-field="postMarketChangePercent"]',
+                '[data-field="postMarketChangePercent"]',
+                '[data-testid="qsp-price-change-percent"]',  # Fallback
+            ],
+            'volume': [
+                'fin-streamer[data-field="postMarketVolume"]',
+                'fin-streamer[data-field="regularMarketVolume"]',  # Fallback to regular volume
+            ]
+        }
+        
+        # Extract post-market data
+        for field, selector_list in selectors.items():
+            value = self._extract_value_from_selectors(soup, selector_list)
+            if value:
+                data[field] = value
+        
+        # Get regular market data for missing fields
+        regular_data = self._extract_regular_market_data(soup, symbol)
+        for key, value in regular_data.items():
+            if key not in data:
+                data[key] = value
+        
+        self.logger.debug(f"Post-market data for {symbol}: {data}")
+        return data
+    
+    def _extract_pre_market_data(self, soup: BeautifulSoup, symbol: str) -> Dict[str, Any]:
+        """Extract pre-market trading data."""
+        data = {}
+        
+        # Pre-market specific selectors (also use testid if available)
+        selectors = {
+            'price': [
+                'fin-streamer[data-field="preMarketPrice"]',
+                '[data-field="preMarketPrice"]',
+                '[data-testid="qsp-price"]',  # Fallback to main price
+            ],
+            'change': [
+                'fin-streamer[data-field="preMarketChange"]',
+                '[data-field="preMarketChange"]',
+                '[data-testid="qsp-price-change"]',  # Fallback
+            ],
+            'change_percent': [
+                'fin-streamer[data-field="preMarketChangePercent"]',
+                '[data-field="preMarketChangePercent"]',
+                '[data-testid="qsp-price-change-percent"]',  # Fallback
+            ]
+        }
+        
+        # Extract pre-market data
+        for field, selector_list in selectors.items():
+            value = self._extract_value_from_selectors(soup, selector_list)
+            if value:
+                data[field] = value
+        
+        # Get regular market data for missing fields
+        regular_data = self._extract_regular_market_data(soup, symbol)
+        for key, value in regular_data.items():
+            if key not in data:
+                data[key] = value
+        
+        self.logger.debug(f"Pre-market data for {symbol}: {data}")
+        return data
+    
+    def _extract_regular_market_data(self, soup: BeautifulSoup, symbol: str) -> Dict[str, Any]:
+        """Extract regular market trading data."""
+        data = {}
+        
+        # FIXED: Prioritize the working data-testid selectors
+        selectors = {
+            'price': [
+                '[data-testid="qsp-price"] span',          # Most reliable current price
+                '[data-testid="qsp-price"]',
+                'fin-streamer[data-field="regularMarketPrice"]',
+                '[data-field="regularMarketPrice"]',
+                '.D\\(ib\\).Mend\\(20px\\) .Trsdu\\(0\\.3s\\).Fw\\(b\\).Fz\\(36px\\)',
+            ],
+            'change': [
+                '[data-testid="qsp-price-change"]',        # PRIMARY - Working selector
+                'fin-streamer[data-field="regularMarketChange"]',
+                '[data-field="regularMarketChange"]',
+            ],
+            'change_percent': [
+                '[data-testid="qsp-price-change-percent"]', # PRIMARY - Working selector
+                'fin-streamer[data-field="regularMarketChangePercent"]',
+                '[data-field="regularMarketChangePercent"]',
+            ],
+            'volume': [
+                'fin-streamer[data-field="regularMarketVolume"]',
+                '[data-field="regularMarketVolume"]',
+                'td[data-test="VOLUME-value"]',
+            ],
+            'open': [
+                'fin-streamer[data-field="regularMarketOpen"]',
+                '[data-field="regularMarketOpen"]',
+                'td[data-test="OPEN-value"]',
+            ],
+            'previous_close': [
+                'fin-streamer[data-field="regularMarketPreviousClose"]',
+                '[data-field="regularMarketPreviousClose"]',
+                'td[data-test="PREV_CLOSE-value"]',
+            ]
+        }
+        
+        # Extract data using multiple selector strategies
+        for field, selector_list in selectors.items():
+            value = self._extract_value_from_selectors(soup, selector_list)
+            if value:
+                data[field] = value
+        
+        # Extract day range (high/low)
+        day_range = self._extract_day_range(soup)
+        if day_range:
+            data['high'], data['low'] = day_range
+        
+        self.logger.debug(f"Regular market data for {symbol}: {data}")
+        return data
+    
+    def _extract_fallback_data(self, soup: BeautifulSoup, symbol: str) -> Dict[str, Any]:
+        """Fallback data extraction when market state is unclear."""
+        # PRIORITY: Use the working testid selectors first
+        all_price_selectors = [
+            # Most current price indicators (PRIORITY ORDER)
+            '[data-testid="qsp-price"] span',
+            '[data-testid="qsp-price"]',
+            
+            # Market-specific prices
+            'fin-streamer[data-field="postMarketPrice"]',
+            'fin-streamer[data-field="preMarketPrice"]', 
+            'fin-streamer[data-field="regularMarketPrice"]',
+            '[data-field="postMarketPrice"]',
+            '[data-field="preMarketPrice"]',
+            '[data-field="regularMarketPrice"]',
+            
+            # CSS fallbacks
+            '.D\\(ib\\).Mend\\(20px\\) .Trsdu\\(0\\.3s\\).Fw\\(b\\).Fz\\(36px\\)',
+            '.Fw\\(b\\).Fz\\(36px\\)',
+        ]
+        
+        data = {}
+        
+        # Try to get the most current price
+        price = self._extract_value_from_selectors(soup, all_price_selectors)
+        if price:
+            data['price'] = price
+        
+        # Get other regular market data as fallback
+        regular_data = self._extract_regular_market_data(soup, symbol)
+        for key, value in regular_data.items():
+            if key not in data:
+                data[key] = value
+        
+        return data
+    
+    def _extract_value_from_selectors(self, soup: BeautifulSoup, selectors: List[str]) -> Optional[str]:
+        """Try multiple selectors to extract a value."""
+        for selector in selectors:
+            try:
+                element = soup.select_one(selector)
+                if element:
+                    # Try different attribute sources
+                    value = (element.get('value') or 
+                           element.get('data-value') or 
+                           element.text.strip())
+                    if value and value.strip():
+                        # Clean the value
+                        cleaned_value = value.strip().replace('\n', '').replace('\t', '')
+                        if cleaned_value and cleaned_value not in ['--', 'N/A', '']:
+                            return cleaned_value
+            except Exception as e:
+                self.logger.debug(f"Selector {selector} failed: {e}")
+                continue
+        return None
+    
+    def _extract_day_range(self, soup: BeautifulSoup) -> Optional[tuple]:
+        """Extract day range (high/low) from various formats."""
+        try:
+            # Multiple strategies for day range
+            range_selectors = [
+                'td[data-test="DAYS_RANGE-value"]',
+                '[data-test="DAYS_RANGE-value"]',
+                'fin-streamer[data-field="regularMarketDayRange"]',
+                '[data-field="regularMarketDayRange"]',
+            ]
+            
+            for selector in range_selectors:
+                try:
+                    element = soup.select_one(selector)
+                    if element:
+                        range_text = element.text.strip()
+                        
+                        # Parse "150.25 - 152.10" format
+                        if ' - ' in range_text:
+                            parts = range_text.split(' - ')
+                            if len(parts) == 2:
+                                low_val = parse_financial_value(parts[0].strip())
+                                high_val = parse_financial_value(parts[1].strip())
+                                if low_val and high_val:
+                                    return (high_val, low_val)
+                except Exception as e:
+                    self.logger.debug(f"Error with range selector {selector}: {e}")
+                    continue
+            
+            # Fallback: Try individual high/low elements
+            high_selectors = [
+                'fin-streamer[data-field="regularMarketDayHigh"]',
+                '[data-field="regularMarketDayHigh"]'
+            ]
+            
+            low_selectors = [
+                'fin-streamer[data-field="regularMarketDayLow"]',
+                '[data-field="regularMarketDayLow"]'
+            ]
+            
+            high_val = self._extract_value_from_selectors(soup, high_selectors)
+            low_val = self._extract_value_from_selectors(soup, low_selectors)
+            
+            if high_val and low_val:
+                high_parsed = parse_financial_value(high_val)
+                low_parsed = parse_financial_value(low_val)
+                if high_parsed and low_parsed:
+                    return (high_parsed, low_parsed)
+            
+            return None
+            
+        except Exception as e:
+            self.logger.debug(f"Error extracting day range: {e}")
+            return None
+    
+    def _calculate_nominal_change(self, change_percent: Decimal, previous_close: Decimal) -> Decimal:
+        """Calculate nominal change from percentage and previous close."""
+        try:
+            if previous_close and change_percent:
+                nominal_change = (change_percent * previous_close) / 100
+                return nominal_change
+            return Decimal('0')
+        except Exception:
+            return Decimal('0')
+    
+    def _parse_extracted_data(self, data: Dict[str, Any], symbol: str) -> Optional[Dict[str, Any]]:
+        """Parse and convert extracted data with enhanced change calculation - FIXED VERSION."""
+        try:
+            parsed = {}
+            
+            # Parse price (required)
+            if 'price' in data:
+                price_value = data['price']
+                if isinstance(price_value, (Decimal, float, int)):
+                    price = Decimal(str(price_value))
+                else:
+                    price = parse_financial_value(str(price_value))
+                
+                if price and price > 0:
+                    parsed['price'] = price
+                else:
+                    self.logger.error(f"Invalid price for {symbol}: {data['price']}")
+                    return None
+            else:
+                return None
+            
+            # Parse other basic fields
+            for field, parsed_key in [
+                ('volume', 'volume'),
+                ('open', 'open'),
+                ('previous_close', 'previous_close'),
+                ('high', 'high'),
+                ('low', 'low'),
+            ]:
+                if field in data and data[field] is not None:
+                    if field == 'volume':
+                        if isinstance(data[field], int):
+                            parsed[parsed_key] = data[field]
+                        elif isinstance(data[field], (float, Decimal)):
+                            parsed[parsed_key] = int(data[field])
+                        else:
+                            volume = parse_volume(str(data[field]))
+                            if volume is not None and volume >= 0:
+                                parsed[parsed_key] = volume
+                    else:
+                        if isinstance(data[field], (Decimal, float, int)):
+                            value = Decimal(str(data[field]))
+                        else:
+                            value = parse_financial_value(str(data[field]))
+                        
+                        if value is not None and value > 0:
+                            parsed[parsed_key] = value
+            
+            # ENHANCED: Parse changes with multiple strategies
+            nominal_change, percentage_change = self._extract_and_calculate_changes(data, parsed, symbol)
+            parsed['daily_change_nominal'] = nominal_change
+            parsed['daily_change_percent'] = percentage_change
+            
+            # Set defaults for missing fields
+            if 'volume' not in parsed:
+                parsed['volume'] = 0
+            if 'high' not in parsed:
+                parsed['high'] = parsed['price']
+            if 'low' not in parsed:
+                parsed['low'] = parsed['price']
+            if 'open' not in parsed:
+                parsed['open'] = parsed['price']
+            if 'previous_close' not in parsed:
+                parsed['previous_close'] = parsed['price']
+            
+            # Validation: ensure high >= price >= low
+            if parsed['price'] > parsed['high']:
+                parsed['high'] = parsed['price']
+            if parsed['price'] < parsed['low']:
+                parsed['low'] = parsed['price']
+            
+            self.logger.debug(f"Successfully parsed data for {symbol}: Price=${parsed['price']}, Change=${parsed['daily_change_nominal']} ({parsed['daily_change_percent']}%)")
+            return parsed
+            
+        except Exception as e:
+            self.logger.error(f"Error in enhanced parsing for {symbol}: {e}")
+            import traceback
+            self.logger.debug(f"Traceback: {traceback.format_exc()}")
+            return None
+    
+    def _extract_and_calculate_changes(self, data: Dict[str, Any], parsed: Dict[str, Any], symbol: str) -> tuple[Decimal, Decimal]:
+        """Extract or calculate daily changes with multiple fallback strategies."""
+        
+        # Strategy 1: Use directly extracted change data from testid selectors
+        if self._has_direct_change_data(data):
+            return self._use_direct_change_data(data, parsed, symbol)
+        
+        # Strategy 2: Calculate manually from current price and previous close
+        if self._can_calculate_from_prices(parsed):
+            return self._calculate_from_prices(parsed, symbol)
+        
+        # Strategy 3: Try to parse combined change display (e.g., "+2.15 (+1.45%)")
+        if self._can_extract_from_combined_display(data):
+            return self._extract_from_combined_display(data, symbol)
+        
+        # Strategy 4: Zero fallback
+        self.logger.warning(f"No change data available for {symbol}, using zero values")
+        return Decimal('0'), Decimal('0')
+    
+    def _has_direct_change_data(self, data: Dict[str, Any]) -> bool:
+        """Check if we have direct change data from testid selectors."""
+        has_nominal = 'change' in data and data['change'] is not None
+        has_percent = 'change_percent' in data and data['change_percent'] is not None
+        return has_nominal or has_percent
+    
+    def _use_direct_change_data(self, data: Dict[str, Any], parsed: Dict[str, Any], symbol: str) -> tuple[Decimal, Decimal]:
+        """Use directly extracted change data from testid selectors."""
+        nominal_change = Decimal('0')
+        percentage_change = Decimal('0')
+        
+        # Extract nominal change
+        if 'change' in data and data['change'] is not None:
+            if isinstance(data['change'], (Decimal, float, int)):
+                nominal_change = Decimal(str(data['change']))
+            else:
+                nominal_change = parse_financial_value(str(data['change'])) or Decimal('0')
+        
+        # Extract percentage change  
+        if 'change_percent' in data and data['change_percent'] is not None:
+            if isinstance(data['change_percent'], (Decimal, float, int)):
+                percentage_change = Decimal(str(data['change_percent']))
+            else:
+                percentage_change = parse_financial_value(str(data['change_percent'])) or Decimal('0')
+        
+        # If we only have one, calculate the other
+        if nominal_change != Decimal('0') and percentage_change == Decimal('0'):
+            # Calculate percentage from nominal and previous close
+            if 'previous_close' in parsed and parsed['previous_close'] != Decimal('0'):
+                percentage_change = (nominal_change / parsed['previous_close']) * 100
+        
+        elif percentage_change != Decimal('0') and nominal_change == Decimal('0'):
+            # Calculate nominal from percentage and previous close
+            if 'previous_close' in parsed:
+                nominal_change = (percentage_change * parsed['previous_close']) / 100
+        
+        self.logger.debug(f"Direct change data for {symbol}: ${nominal_change}, {percentage_change}%")
+        return nominal_change, percentage_change
+    
+    def _can_calculate_from_prices(self, parsed: Dict[str, Any]) -> bool:
+        """Check if we can calculate changes from current and previous prices."""
+        has_current = 'price' in parsed and parsed['price'] is not None
+        has_previous = 'previous_close' in parsed and parsed['previous_close'] is not None
+        return has_current and has_previous and parsed['previous_close'] != Decimal('0')
+    
+    def _calculate_from_prices(self, parsed: Dict[str, Any], symbol: str) -> tuple[Decimal, Decimal]:
+        """Calculate changes manually from current price and previous close."""
+        try:
+            current_price = parsed['price']
+            previous_close = parsed['previous_close']
+            
+            # Calculate nominal change
+            nominal_change = current_price - previous_close
+            
+            # Calculate percentage change
+            percentage_change = (nominal_change / previous_close) * 100
+            
+            self.logger.info(f"✅ Calculated changes for {symbol}: ${nominal_change:.2f} ({percentage_change:.2f}%)")
+            return nominal_change, percentage_change
+            
+        except Exception as e:
+            self.logger.error(f"Error calculating changes from prices for {symbol}: {e}")
+            return Decimal('0'), Decimal('0')
+    
+    def _can_extract_from_combined_display(self, data: Dict[str, Any]) -> bool:
+        """Check if we can extract from combined change display."""
+        # Look for fields that might contain combined change info
+        combined_fields = ['change_combined', 'price_change_display', 'change_display']
+        return any(field in data and data[field] for field in combined_fields)
+    
+    def _extract_from_combined_display(self, data: Dict[str, Any], symbol: str) -> tuple[Decimal, Decimal]:
+        """Extract changes from combined display string like '+2.15 (+1.45%)'."""
+        import re
+        
+        combined_fields = ['change_combined', 'price_change_display', 'change_display']
+        
+        for field in combined_fields:
+            if field in data and data[field]:
+                text = str(data[field]).strip()
+                
+                # Pattern to match: "+2.15 (+1.45%)" or "-0.50 (-0.33%)"
+                pattern = r'([+-]?\d+\.?\d*)\s*\(([+-]?\d+\.?\d*)%\)'
+                match = re.search(pattern, text)
+                
+                if match:
+                    try:
+                        nominal_str = match.group(1)
+                        percent_str = match.group(2)
+                        
+                        nominal_change = Decimal(nominal_str)
+                        percentage_change = Decimal(percent_str)
+                        
+                        self.logger.debug(f"Extracted from combined display for {symbol}: {text} -> ${nominal_change}, {percentage_change}%")
+                        return nominal_change, percentage_change
+                        
+                    except Exception as e:
+                        self.logger.debug(f"Error parsing combined display '{text}' for {symbol}: {e}")
+                        continue
+        
+        return Decimal('0'), Decimal('0')
     
     @retry_with_backoff(max_retries=3)
     def _make_request(self, url: str) -> requests.Response:
@@ -151,284 +699,9 @@ class YahooFinanceScraper:
         except requests.exceptions.RequestException as e:
             raise NetworkError(f"Request error: {e}")
     
-    def _parse_response(self, response: requests.Response, symbol: str) -> Optional[StockData]:
-        """Parse HTML response to extract stock data."""
-        try:
-            soup = BeautifulSoup(response.content, 'html.parser')
-            
-            # Yahoo Finance uses various selectors for different data points
-            data = {}
-            
-            # Primary selectors for stock data
-            selectors = {
-                'price': [
-                    'fin-streamer[data-field="regularMarketPrice"]',
-                    '[data-field="regularMarketPrice"]',
-                    '[data-testid="qsp-price"]',
-                    '.Trsdu\\(0\\.3s\\) .Fw\\(b\\).Fz\\(36px\\)'
-                ],
-                'change': [
-                    'fin-streamer[data-field="regularMarketChange"]',
-                    '[data-field="regularMarketChange"]',
-                    '[data-testid="qsp-price-change"]'
-                ],
-                'change_percent': [
-                    'fin-streamer[data-field="regularMarketChangePercent"]',
-                    '[data-field="regularMarketChangePercent"]',
-                    '[data-testid="qsp-price-change-percent"]'
-                ],
-                'volume': [
-                    'fin-streamer[data-field="regularMarketVolume"]',
-                    '[data-field="regularMarketVolume"]',
-                    'td[data-test="VOLUME-value"]'
-                ],
-                'open': [
-                    'fin-streamer[data-field="regularMarketOpen"]',
-                    '[data-field="regularMarketOpen"]',
-                    'td[data-test="OPEN-value"]'
-                ],
-                'previous_close': [
-                    'fin-streamer[data-field="regularMarketPreviousClose"]',
-                    '[data-field="regularMarketPreviousClose"]',
-                    'td[data-test="PREV_CLOSE-value"]'
-                ]
-            }
-            
-            # Extract data using multiple selector strategies
-            for field, selector_list in selectors.items():
-                value = None
-                for selector in selector_list:
-                    try:
-                        element = soup.select_one(selector)
-                        if element:
-                            # Try different attribute sources
-                            value = (element.get('value') or 
-                                   element.get('data-value') or 
-                                   element.text.strip())
-                            if value:
-                                break
-                    except Exception as e:
-                        self.logger.debug(f"Selector {selector} failed for {field}: {e}")
-                        continue
-                
-                if value:
-                    data[field] = value
-                else:
-                    self.logger.warning(f"Could not find {field} for {symbol}")
-            
-            # Special handling for day range (high/low combined)
-            day_range = self._extract_day_range(soup)
-            if day_range:
-                data['high'], data['low'] = day_range
-            else:
-                self.logger.warning(f"Could not find day range for {symbol}")
-            
-            # Validate we have minimum required data
-            required_fields = ['price']
-            if not all(field in data for field in required_fields):
-                missing = [f for f in required_fields if f not in data]
-                raise ParsingError(f"Missing required fields for {symbol}: {missing}")
-            
-            # Parse and validate the extracted data
-            parsed_data = self._parse_extracted_data(data, symbol)
-            
-            if not parsed_data:
-                raise ParsingError(f"Failed to parse data for {symbol}")
-            
-            # Create StockData object
-            stock_data = StockData(
-                symbol=symbol,
-                price=parsed_data['price'],
-                daily_change_percent=parsed_data.get('daily_change_percent', Decimal('0')),
-                daily_change_nominal=parsed_data.get('daily_change_nominal', Decimal('0')),
-                volume=parsed_data.get('volume', 0),
-                high=parsed_data.get('high', parsed_data['price']),
-                low=parsed_data.get('low', parsed_data['price']),
-                open=parsed_data.get('open', parsed_data['price']),
-                previous_close=parsed_data.get('previous_close', parsed_data['price']),
-                last_updated=datetime.utcnow().isoformat() + 'Z',
-                market='NASDAQ'
-            )
-            
-            # Validate the stock data
-            if not stock_data.validate():
-                raise DataValidationError(f"Invalid stock data for {symbol}")
-            
-            return stock_data
-            
-        except ParsingError:
-            raise
-        except DataValidationError:
-            raise
-        except Exception as e:
-            raise ParsingError(f"Error parsing response for {symbol}: {e}")
-    
-    def _extract_day_range(self, soup: BeautifulSoup) -> Optional[tuple]:
-        """Extract day range (high/low) from various formats."""
-        try:
-            # Strategy 1: Look for Day's Range label + value
-            range_selectors = [
-                # Look for span with Day's Range title and get next sibling
-                'span[title="Day\'s Range"] + span',
-                'span[title="Day\'s Range"]',
-                # Look for the data-test attribute
-                'td[data-test="DAYS_RANGE-value"]',
-                '[data-test="DAYS_RANGE-value"]',
-                # Generic patterns
-                '.Ta\\(end\\).Fw\\(600\\).Lh\\(14px\\)'
-            ]
-            
-            for selector in range_selectors:
-                try:
-                    element = soup.select_one(selector)
-                    if element:
-                        # If this is the label, try to find the value
-                        if 'Day\'s Range' in element.get('title', ''):
-                            # Look for next sibling or parent's next element
-                            value_element = element.find_next_sibling() or element.parent.find_next_sibling()
-                            if value_element:
-                                range_text = value_element.text.strip()
-                            else:
-                                continue
-                        else:
-                            range_text = element.text.strip()
-                        
-                        # Parse "150.25 - 152.10" format
-                        if ' - ' in range_text:
-                            parts = range_text.split(' - ')
-                            if len(parts) == 2:
-                                low_val = parse_financial_value(parts[0])
-                                high_val = parse_financial_value(parts[1])
-                                if low_val and high_val:
-                                    return (high_val, low_val)
-                except Exception as e:
-                    self.logger.debug(f"Error with selector {selector}: {e}")
-                    continue
-            
-            # Strategy 2: Look for individual high/low elements
-            high_selectors = [
-                'fin-streamer[data-field="regularMarketDayHigh"]',
-                '[data-field="regularMarketDayHigh"]',
-                'td[data-test="DAYS_RANGE-value"] span:first-child'
-            ]
-            
-            low_selectors = [
-                'fin-streamer[data-field="regularMarketDayLow"]',
-                '[data-field="regularMarketDayLow"]',
-                'td[data-test="DAYS_RANGE-value"] span:last-child'
-            ]
-            
-            high_val = None
-            low_val = None
-            
-            for selector in high_selectors:
-                element = soup.select_one(selector)
-                if element:
-                    value = element.get('value') or element.text.strip()
-                    high_val = parse_financial_value(value)
-                    if high_val:
-                        break
-            
-            for selector in low_selectors:
-                element = soup.select_one(selector)
-                if element:
-                    value = element.get('value') or element.text.strip()
-                    low_val = parse_financial_value(value)
-                    if low_val:
-                        break
-            
-            if high_val and low_val:
-                return (high_val, low_val)
-            
-            return None
-            
-        except Exception as e:
-            self.logger.debug(f"Error extracting day range: {e}")
-            return None
-    
-    def _parse_extracted_data(self, data: Dict[str, str], symbol: str) -> Optional[Dict[str, Any]]:
-        """Parse and convert extracted string data to appropriate types."""
-        try:
-            parsed = {}
-            
-            # Parse price (required)
-            if 'price' in data:
-                price = parse_financial_value(data['price'])
-                if price and price > 0:
-                    parsed['price'] = price
-                else:
-                    self.logger.error(f"Invalid price for {symbol}: {data['price']}")
-                    return None
-            else:
-                return None
-            
-            # Parse daily change nominal
-            if 'change' in data:
-                change = parse_financial_value(data['change'])
-                if change is not None:
-                    parsed['daily_change_nominal'] = change
-            
-            # Parse daily change percentage
-            if 'change_percent' in data:
-                change_pct = parse_financial_value(data['change_percent'])
-                if change_pct is not None:
-                    parsed['daily_change_percent'] = change_pct
-            
-            # Parse volume
-            if 'volume' in data:
-                volume = parse_volume(data['volume'])
-                if volume is not None and volume >= 0:
-                    parsed['volume'] = volume
-            
-            # Parse open
-            if 'open' in data:
-                open_price = parse_financial_value(data['open'])
-                if open_price and open_price > 0:
-                    parsed['open'] = open_price
-            
-            # Parse previous close
-            if 'previous_close' in data:
-                prev_close = parse_financial_value(data['previous_close'])
-                if prev_close and prev_close > 0:
-                    parsed['previous_close'] = prev_close
-            
-            # Parse high
-            if 'high' in data:
-                high = parse_financial_value(data['high'])
-                if high and high > 0:
-                    parsed['high'] = high
-            
-            # Parse low
-            if 'low' in data:
-                low = parse_financial_value(data['low'])
-                if low and low > 0:
-                    parsed['low'] = low
-            
-            # Set defaults for missing optional fields
-            if 'daily_change_percent' not in parsed:
-                parsed['daily_change_percent'] = Decimal('0')
-            if 'daily_change_nominal' not in parsed:
-                parsed['daily_change_nominal'] = Decimal('0')
-            if 'volume' not in parsed:
-                parsed['volume'] = 0
-            if 'high' not in parsed:
-                parsed['high'] = parsed['price']
-            if 'low' not in parsed:
-                parsed['low'] = parsed['price']
-            if 'open' not in parsed:
-                parsed['open'] = parsed['price']
-            if 'previous_close' not in parsed:
-                parsed['previous_close'] = parsed['price']
-            
-            return parsed
-            
-        except Exception as e:
-            self.logger.error(f"Error parsing extracted data for {symbol}: {e}")
-            return None
-    
     def scrape_batch(self, symbols: List[str]) -> BatchResult:
         """Scrape multiple symbols and return batch results."""
-        start_time = datetime.utcnow()
+        start_time = datetime.now(UTC)
         results = []
         successful = 0
         failed = 0
@@ -437,9 +710,7 @@ class YahooFinanceScraper:
         
         for i, symbol in enumerate(symbols):
             try:
-                # Progress logging
-                if (i + 1) % 10 == 0:
-                    self.logger.info(f"Progress: {i + 1}/{len(symbols)} symbols processed")
+                self.logger.info(f"[{i+1}/{len(symbols)}] Scraping {symbol}...")
                 
                 stock_data = self.scrape_symbol(symbol)
                 if stock_data:
@@ -448,6 +719,7 @@ class YahooFinanceScraper:
                 else:
                     result = ScrapingResult(symbol=symbol, success=False, error="No data returned")
                     failed += 1
+                    self.logger.warning(f"❌ {symbol}: No data returned")
                 
                 results.append(result)
                 
@@ -455,9 +727,9 @@ class YahooFinanceScraper:
                 result = ScrapingResult(symbol=symbol, success=False, error=str(e))
                 results.append(result)
                 failed += 1
-                self.logger.warning(f"Failed to scrape {symbol}: {e}")
+                self.logger.warning(f"❌ {symbol}: {e}")
         
-        end_time = datetime.utcnow()
+        end_time = datetime.now(UTC)
         duration = (end_time - start_time).total_seconds()
         
         batch_result = BatchResult(
@@ -465,14 +737,20 @@ class YahooFinanceScraper:
             successful=successful,
             failed=failed,
             results=results,
-            start_time=start_time.isoformat() + 'Z',
-            end_time=end_time.isoformat() + 'Z',
+            start_time=start_time.isoformat(),
+            end_time=end_time.isoformat(),
             duration_seconds=duration
         )
         
+        # Log market state statistics
         self.logger.info(
             f"Batch scrape completed: {successful}/{len(symbols)} successful "
             f"({batch_result.success_rate:.1f}%) in {duration:.1f}s"
+        )
+        self.logger.info(
+            f"Market state distribution - Regular: {self.stats['market_hours_data']}, "
+            f"Pre-market: {self.stats['pre_market_data']}, "
+            f"After-hours: {self.stats['after_hours_data']}"
         )
         
         return batch_result
@@ -489,7 +767,7 @@ class YahooFinanceScraper:
             **self.stats,
             'success_rate_percent': round(success_rate, 2),
             'current_rate_limit': self.rate_limiter.get_current_rate(),
-            'timestamp': datetime.utcnow().isoformat() + 'Z'
+            'timestamp': datetime.now(UTC).isoformat()
         }
     
     def reset_stats(self):
@@ -500,7 +778,10 @@ class YahooFinanceScraper:
             'failed_scrapes': 0,
             'rate_limit_hits': 0,
             'timeout_errors': 0,
-            'parsing_errors': 0
+            'parsing_errors': 0,
+            'market_hours_data': 0,
+            'after_hours_data': 0,
+            'pre_market_data': 0
         }
         self.logger.info("Scraper statistics reset")
     
