@@ -6,7 +6,7 @@ from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass
 
 from src.historical_scraper import YahooHistoricalScraper, HistoricalDataValidator
-from src.historical_database import HistoricalDataManager
+from src.historical_database_manager import HistoricalDataManager
 from src.utils import load_nasdaq_symbols
 from src.config import config
 

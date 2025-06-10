@@ -65,6 +65,45 @@ class Config:
         'Connection': 'keep-alive',
         'Upgrade-Insecure-Requests': '1',
     }
+
+    # Historical Data Configuration
+    TIINGO_API_TOKEN = os.getenv('TIINGO_API_TOKEN')
+    TIINGO_BASE_URL = "https://api.tiingo.com/tiingo/daily"
+    
+    # Historical database settings
+    HISTORICAL_TABLE_NAME = os.getenv('HISTORICAL_TABLE_NAME', f'{DYNAMODB_TABLE_NAME}_historical')
+    
+    # Historical data fetching settings
+    HISTORICAL_BATCH_SIZE = int(os.getenv('HISTORICAL_BATCH_SIZE', '10'))
+    HISTORICAL_REQUEST_DELAY = float(os.getenv('HISTORICAL_REQUEST_DELAY', '1.0'))  # seconds between requests
+    HISTORICAL_MAX_RETRIES = int(os.getenv('HISTORICAL_MAX_RETRIES', '3'))
+    
+    # Data validation for historical data
+    HISTORICAL_MIN_PRICE = float(os.getenv('HISTORICAL_MIN_PRICE', '0.01'))
+    HISTORICAL_MAX_PRICE = float(os.getenv('HISTORICAL_MAX_PRICE', '50000.0'))
+    
+    # Analysis settings
+    DEFAULT_ANALYSIS_DAYS = int(os.getenv('DEFAULT_ANALYSIS_DAYS', '30'))
+    VOLATILITY_CALCULATION_METHOD = os.getenv('VOLATILITY_CALCULATION_METHOD', 'standard_deviation')
+    
+    @classmethod
+    def validate_historical_config(cls) -> List[str]:
+        """Validate historical data configuration settings."""
+        issues = []
+        
+        # Check Tiingo API token
+        if not cls.TIINGO_API_TOKEN:
+            issues.append("TIINGO_API_TOKEN not set - required for historical data fetching")
+        
+        # Validate batch size
+        if cls.HISTORICAL_BATCH_SIZE < 1 or cls.HISTORICAL_BATCH_SIZE > 50:
+            issues.append("HISTORICAL_BATCH_SIZE should be between 1 and 50")
+        
+        # Validate delays
+        if cls.HISTORICAL_REQUEST_DELAY < 0.1:
+            issues.append("HISTORICAL_REQUEST_DELAY too low (minimum 0.1 seconds)")
+        
+        return issues
     
     @classmethod
     def get_production_config(cls) -> Dict[str, Any]:

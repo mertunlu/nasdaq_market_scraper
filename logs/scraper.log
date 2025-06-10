@@ -649,3 +649,168 @@
 2025-06-10 10:07:53,899 - nasdaq_scraper - INFO - run_single_scrape:104 - Successfully saved 8 stock records
 2025-06-10 10:07:53,899 - nasdaq_scraper - INFO - run_single_scrape:110 - Scraping cycle completed in 25.9s: 8/8 successful (100.0%)
 2025-06-10 10:07:53,899 - nasdaq_scraper - INFO - run_once:218 - Single scrape completed successfully
+2025-06-10 17:35:37,247 - nasdaq_scraper - INFO - initialize:52 - Initializing historical data orchestrator...
+2025-06-10 17:35:57,852 - nasdaq_scraper - INFO - initialize:79 - All components initialized successfully
+2025-06-10 17:35:57,855 - nasdaq_scraper - INFO - fetch_full_historical_data:102 - Starting historical data fetch for 87 symbols
+2025-06-10 17:35:57,855 - nasdaq_scraper - INFO - fetch_full_historical_data:103 - Fetching 365 days of data
+2025-06-10 17:35:57,855 - nasdaq_scraper - INFO - fetch_full_historical_data:119 - Processing batch 1: symbols 1-10
+2025-06-10 17:35:59,920 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ PEP: 250 records saved
+2025-06-10 17:36:01,270 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ TMUS: 250 records saved
+2025-06-10 17:36:02,459 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ CSCO: 250 records saved
+2025-06-10 17:36:03,815 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ ORCL: 250 records saved
+2025-06-10 17:36:05,659 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ CRM: 250 records saved
+2025-06-10 17:36:06,992 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ ACN: 250 records saved
+2025-06-10 17:36:08,304 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ INTC: 250 records saved
+2025-06-10 17:36:09,654 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ AMD: 250 records saved
+2025-06-10 17:36:11,069 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ QCOM: 250 records saved
+2025-06-10 17:36:12,539 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ TXN: 250 records saved
+2025-06-10 17:36:12,539 - nasdaq_scraper - INFO - _log_progress:195 - Progress: 10/87 symbols (11.5%) - 10 successful
+2025-06-10 17:36:12,540 - nasdaq_scraper - INFO - fetch_full_historical_data:119 - Processing batch 2: symbols 11-20
+2025-06-10 17:36:13,881 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ INTU: 250 records saved
+2025-06-10 17:36:15,207 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ CMCSA: 250 records saved
+2025-06-10 17:36:17,175 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ AMGN: 250 records saved
+2025-06-10 17:36:18,952 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ HON: 250 records saved
+2025-06-10 17:36:20,575 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ AMAT: 250 records saved
+2025-06-10 17:36:22,057 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ PANW: 250 records saved
+2025-06-10 17:36:23,525 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ VRTX: 250 records saved
+2025-06-10 17:36:25,009 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ ADI: 250 records saved
+2025-06-10 17:36:26,513 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ GILD: 250 records saved
+2025-06-10 17:36:28,172 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ BKNG: 250 records saved
+2025-06-10 17:36:28,173 - nasdaq_scraper - INFO - _log_progress:195 - Progress: 20/87 symbols (23.0%) - 20 successful
+2025-06-10 17:36:28,173 - nasdaq_scraper - INFO - fetch_full_historical_data:119 - Processing batch 3: symbols 21-30
+2025-06-10 17:36:30,153 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ MU: 250 records saved
+2025-06-10 17:36:31,622 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ ADP: 250 records saved
+2025-06-10 17:36:33,128 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ LRCX: 250 records saved
+2025-06-10 17:36:34,568 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ SBUX: 250 records saved
+2025-06-10 17:36:36,070 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ MELI: 250 records saved
+2025-06-10 17:36:37,544 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ KLAC: 250 records saved
+2025-06-10 17:36:39,073 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ MDLZ: 250 records saved
+2025-06-10 17:36:40,605 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ SNPS: 250 records saved
+2025-06-10 17:36:42,109 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ CDNS: 250 records saved
+2025-06-10 17:36:43,835 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ REGN: 250 records saved
+2025-06-10 17:36:43,836 - nasdaq_scraper - INFO - _log_progress:195 - Progress: 30/87 symbols (34.5%) - 30 successful
+2025-06-10 17:36:43,836 - nasdaq_scraper - INFO - fetch_full_historical_data:119 - Processing batch 4: symbols 31-40
+2025-06-10 17:36:45,540 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ PYPL: 250 records saved
+2025-06-10 17:36:47,174 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ FTNT: 250 records saved
+2025-06-10 17:36:48,915 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ MAR: 250 records saved
+2025-06-10 17:36:50,424 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ MRVL: 250 records saved
+2025-06-10 17:36:52,241 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ ORLY: 250 records saved
+2025-06-10 17:36:54,469 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ CSX: 250 records saved
+2025-06-10 17:36:56,254 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ DASH: 250 records saved
+2025-06-10 17:36:57,779 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ ADSK: 250 records saved
+2025-06-10 17:36:59,252 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ ABNB: 250 records saved
+2025-06-10 17:37:00,853 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ ROP: 250 records saved
+2025-06-10 17:37:00,854 - nasdaq_scraper - INFO - _log_progress:195 - Progress: 40/87 symbols (46.0%) - 40 successful
+2025-06-10 17:37:00,854 - nasdaq_scraper - INFO - fetch_full_historical_data:119 - Processing batch 5: symbols 41-50
+2025-06-10 17:37:02,303 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ NXPI: 250 records saved
+2025-06-10 17:37:04,255 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ WDAY: 250 records saved
+2025-06-10 17:37:05,830 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ CPRT: 250 records saved
+2025-06-10 17:37:07,311 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ MNST: 250 records saved
+2025-06-10 17:37:08,964 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ FANG: 250 records saved
+2025-06-10 17:37:10,442 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ AEP: 250 records saved
+2025-06-10 17:37:12,422 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ ROST: 250 records saved
+2025-06-10 17:37:14,056 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ KDP: 250 records saved
+2025-06-10 17:37:15,645 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ PAYX: 250 records saved
+2025-06-10 17:37:17,274 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ ODFL: 250 records saved
+2025-06-10 17:37:17,275 - nasdaq_scraper - INFO - _log_progress:195 - Progress: 50/87 symbols (57.5%) - 50 successful
+2025-06-10 17:37:17,275 - nasdaq_scraper - INFO - fetch_full_historical_data:119 - Processing batch 6: symbols 51-60
+2025-06-10 17:37:18,707 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ FAST: 250 records saved
+2025-06-10 17:40:25,748 - nasdaq_scraper - ERROR - fetch_full_historical_data:128 - Failed to process BKR: Rate limited for BKR
+2025-06-10 17:40:46,695 - nasdaq_scraper - INFO - cleanup:318 - Resources cleaned up
+2025-06-10 17:42:56,539 - nasdaq_scraper - INFO - initialize:52 - Initializing historical data orchestrator...
+2025-06-10 17:42:56,891 - nasdaq_scraper - INFO - initialize:79 - All components initialized successfully
+2025-06-10 17:42:56,892 - nasdaq_scraper - INFO - fetch_full_historical_data:102 - Starting historical data fetch for 44 symbols
+2025-06-10 17:42:56,892 - nasdaq_scraper - INFO - fetch_full_historical_data:103 - Fetching 365 days of data
+2025-06-10 17:42:56,892 - nasdaq_scraper - INFO - fetch_full_historical_data:119 - Processing batch 1: symbols 1-10
+2025-06-10 17:42:58,578 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ AAPL: 250 records saved
+2025-06-10 17:42:59,973 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ MSFT: 250 records saved
+2025-06-10 17:43:01,354 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ GOOGL: 250 records saved
+2025-06-10 17:43:02,683 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ GOOG: 250 records saved
+2025-06-10 17:43:03,895 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ AMZN: 250 records saved
+2025-06-10 17:43:05,251 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ TSLA: 250 records saved
+2025-06-10 17:43:06,592 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ META: 250 records saved
+2025-06-10 17:43:08,022 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ NVDA: 250 records saved
+2025-06-10 17:43:09,330 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ AVGO: 250 records saved
+2025-06-10 17:43:10,645 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ ASML: 250 records saved
+2025-06-10 17:43:10,646 - nasdaq_scraper - INFO - _log_progress:195 - Progress: 10/44 symbols (22.7%) - 10 successful
+2025-06-10 17:43:10,646 - nasdaq_scraper - INFO - fetch_full_historical_data:119 - Processing batch 2: symbols 11-20
+2025-06-10 17:43:11,982 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ COST: 250 records saved
+2025-06-10 17:43:13,188 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ NFLX: 250 records saved
+2025-06-10 17:43:14,537 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ ADBE: 250 records saved
+2025-06-10 17:43:14,965 - nasdaq_scraper - INFO - _log_progress:195 - Progress: 20/44 symbols (45.5%) - 20 successful
+2025-06-10 17:43:14,965 - nasdaq_scraper - INFO - fetch_full_historical_data:119 - Processing batch 3: symbols 21-30
+2025-06-10 17:43:15,615 - nasdaq_scraper - INFO - _log_progress:195 - Progress: 30/44 symbols (68.2%) - 30 successful
+2025-06-10 17:43:15,615 - nasdaq_scraper - INFO - fetch_full_historical_data:119 - Processing batch 4: symbols 31-40
+2025-06-10 17:43:16,247 - nasdaq_scraper - INFO - _log_progress:195 - Progress: 40/44 symbols (90.9%) - 40 successful
+2025-06-10 17:43:16,247 - nasdaq_scraper - INFO - fetch_full_historical_data:119 - Processing batch 5: symbols 41-44
+2025-06-10 17:43:16,500 - nasdaq_scraper - INFO - _log_progress:195 - Progress: 44/44 symbols (100.0%) - 44 successful
+2025-06-10 17:43:16,503 - nasdaq_scraper - INFO - fetch_full_historical_data:150 - Historical data fetch completed:
+2025-06-10 17:43:16,503 - nasdaq_scraper - INFO - fetch_full_historical_data:151 -   Success: 44/44 symbols (100.0%)
+2025-06-10 17:43:16,503 - nasdaq_scraper - INFO - fetch_full_historical_data:152 -   Total records: 3250
+2025-06-10 17:43:16,506 - nasdaq_scraper - INFO - cleanup:318 - Resources cleaned up
+2025-06-10 17:47:31,475 - nasdaq_scraper - INFO - initialize:52 - Initializing historical data orchestrator...
+2025-06-10 17:47:31,820 - nasdaq_scraper - INFO - initialize:79 - All components initialized successfully
+2025-06-10 17:47:31,823 - nasdaq_scraper - INFO - fetch_full_historical_data:102 - Starting historical data fetch for 51 symbols
+2025-06-10 17:47:31,823 - nasdaq_scraper - INFO - fetch_full_historical_data:103 - Fetching 365 days of data
+2025-06-10 17:47:31,823 - nasdaq_scraper - INFO - fetch_full_historical_data:119 - Processing batch 1: symbols 1-10
+2025-06-10 17:47:32,423 - nasdaq_scraper - INFO - _log_progress:195 - Progress: 10/51 symbols (19.6%) - 10 successful
+2025-06-10 17:47:32,423 - nasdaq_scraper - INFO - fetch_full_historical_data:119 - Processing batch 2: symbols 11-20
+2025-06-10 17:47:33,429 - nasdaq_scraper - INFO - _log_progress:195 - Progress: 20/51 symbols (39.2%) - 20 successful
+2025-06-10 17:47:33,429 - nasdaq_scraper - INFO - fetch_full_historical_data:119 - Processing batch 3: symbols 21-30
+2025-06-10 17:47:36,884 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ BKR: 250 records saved
+2025-06-10 17:47:38,371 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ EA: 250 records saved
+2025-06-10 17:47:39,686 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ DDOG: 250 records saved
+2025-06-10 17:47:41,077 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ VRSK: 250 records saved
+2025-06-10 17:47:42,356 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ XEL: 250 records saved
+2025-06-10 17:47:43,619 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ CTSH: 250 records saved
+2025-06-10 17:47:44,868 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ GEHC: 250 records saved
+2025-06-10 17:47:46,130 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ KHC: 250 records saved
+2025-06-10 17:47:47,240 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ LULU: 250 records saved
+2025-06-10 17:47:48,397 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ TEAM: 250 records saved
+2025-06-10 17:47:48,398 - nasdaq_scraper - INFO - _log_progress:195 - Progress: 30/51 symbols (58.8%) - 30 successful
+2025-06-10 17:47:48,398 - nasdaq_scraper - INFO - fetch_full_historical_data:119 - Processing batch 4: symbols 31-40
+2025-06-10 17:47:49,504 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ CSGP: 250 records saved
+2025-06-10 17:47:50,765 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ IDXX: 250 records saved
+2025-06-10 17:47:51,988 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ ANSS: 250 records saved
+2025-06-10 17:47:53,228 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ ZS: 250 records saved
+2025-06-10 17:47:54,473 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ DXCM: 250 records saved
+2025-06-10 17:47:55,720 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ CCEP: 250 records saved
+2025-06-10 17:47:57,015 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ BIIB: 250 records saved
+2025-06-10 17:47:58,326 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ TTWO: 250 records saved
+2025-06-10 17:47:59,587 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ PCAR: 250 records saved
+2025-06-10 17:48:00,838 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ ON: 250 records saved
+2025-06-10 17:48:00,839 - nasdaq_scraper - INFO - _log_progress:195 - Progress: 40/51 symbols (78.4%) - 40 successful
+2025-06-10 17:48:00,839 - nasdaq_scraper - INFO - fetch_full_historical_data:119 - Processing batch 5: symbols 41-50
+2025-06-10 17:48:02,054 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ CRWD: 250 records saved
+2025-06-10 17:48:03,389 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ CDW: 250 records saved
+2025-06-10 17:48:04,504 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ WBD: 250 records saved
+2025-06-10 17:48:05,753 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ GFS: 250 records saved
+2025-06-10 17:48:06,975 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ ILMN: 250 records saved
+2025-06-10 17:48:08,212 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ MDB: 250 records saved
+2025-06-10 17:48:09,483 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ WBA: 250 records saved
+2025-06-10 17:48:10,718 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ MRNA: 250 records saved
+2025-06-10 17:48:11,964 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ ARM: 250 records saved
+2025-06-10 17:48:13,189 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ SMCI: 250 records saved
+2025-06-10 17:48:13,190 - nasdaq_scraper - INFO - _log_progress:195 - Progress: 50/51 symbols (98.0%) - 50 successful
+2025-06-10 17:48:13,190 - nasdaq_scraper - INFO - fetch_full_historical_data:119 - Processing batch 6: symbols 51-51
+2025-06-10 17:48:14,440 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ DLTR: 250 records saved
+2025-06-10 17:48:14,441 - nasdaq_scraper - INFO - _log_progress:195 - Progress: 51/51 symbols (100.0%) - 51 successful
+2025-06-10 17:48:14,444 - nasdaq_scraper - INFO - fetch_full_historical_data:150 - Historical data fetch completed:
+2025-06-10 17:48:14,444 - nasdaq_scraper - INFO - fetch_full_historical_data:151 -   Success: 51/51 symbols (100.0%)
+2025-06-10 17:48:14,444 - nasdaq_scraper - INFO - fetch_full_historical_data:152 -   Total records: 7750
+2025-06-10 17:48:14,447 - nasdaq_scraper - INFO - cleanup:318 - Resources cleaned up
+2025-06-10 17:48:31,603 - nasdaq_scraper - INFO - initialize:52 - Initializing historical data orchestrator...
+2025-06-10 17:48:31,943 - nasdaq_scraper - INFO - initialize:79 - All components initialized successfully
+2025-06-10 17:48:31,944 - nasdaq_scraper - INFO - fetch_full_historical_data:102 - Starting historical data fetch for 5 symbols
+2025-06-10 17:48:31,944 - nasdaq_scraper - INFO - fetch_full_historical_data:103 - Fetching 365 days of data
+2025-06-10 17:48:31,944 - nasdaq_scraper - INFO - fetch_full_historical_data:119 - Processing batch 1: symbols 1-5
+2025-06-10 17:48:33,519 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ CTAS: 250 records saved
+2025-06-10 17:48:34,767 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ EXC: 250 records saved
+2025-06-10 17:48:35,108 - nasdaq_scraper - WARNING - _process_single_symbol:177 - No historical data returned for SGEN
+2025-06-10 17:48:36,353 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ SIRI: 250 records saved
+2025-06-10 17:48:37,465 - nasdaq_scraper - INFO - _process_single_symbol:189 - ✓ LCID: 250 records saved
+2025-06-10 17:48:37,467 - nasdaq_scraper - INFO - _log_progress:195 - Progress: 5/5 symbols (100.0%) - 5 successful
+2025-06-10 17:48:37,468 - nasdaq_scraper - INFO - fetch_full_historical_data:150 - Historical data fetch completed:
+2025-06-10 17:48:37,468 - nasdaq_scraper - INFO - fetch_full_historical_data:151 -   Success: 5/5 symbols (100.0%)
+2025-06-10 17:48:37,468 - nasdaq_scraper - INFO - fetch_full_historical_data:152 -   Total records: 1000
+2025-06-10 17:48:37,472 - nasdaq_scraper - INFO - cleanup:318 - Resources cleaned up

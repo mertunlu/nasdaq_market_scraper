@@ -5,13 +5,10 @@
   "source": "NASDAQ Official Index",
   "note": "Symbols are subject to change due to index rebalancing",
   "symbols": [
-    "AMZN",
-    "TSLA",
-    "META",
-    "AAPL",
-    "MSFT", 
-    "GOOGL",
-    "GOOG",
-    "NVDA"    
+    "CTAS",
+    "EXC",
+    "SGEN",
+    "SIRI",
+    "LCID"
   ]
 }
